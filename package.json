@@ -1,6 +1,7 @@
 {
   "name": "distributed_job_system",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -20,6 +21,7 @@
     "typescript-eslint": "^8.67.0"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "pg": "^8.23.0"
   }
 }
