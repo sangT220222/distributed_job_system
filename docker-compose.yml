@@ -3,9 +3,9 @@ services:
     image: postgres:18
     container_name: postgres_container_dev
     environment:
-      POSTGRES_USER: job_user
-      POSTGRES_PASSWORD: thisIsASecret123
-      POSTGRES_DB: jobs
+      POSTGRES_USER: ${DATABASE_USERNAM}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
     ports:
       - "5432:5432"
     volumes:
