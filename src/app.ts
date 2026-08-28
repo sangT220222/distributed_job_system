@@ -12,6 +12,6 @@ app.get("/", (req, res) => {
   res.json({ message: "TS API running" });
 });
 
-app.use("/check", router);
+app.use("/", router);
 
 export default app;
