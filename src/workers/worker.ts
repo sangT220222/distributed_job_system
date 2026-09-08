@@ -2,22 +2,26 @@
 //call SQL query to update job_status and finished_at
 //polling method to see if next job avaliable
 import { emailHandler } from "../handlers/sendEmailHandler.js";
-import { retrieveJob } from "../repositories/retrieveJob.js";
-import { markJobFinished, markJobStarted } from "../repositories/updateJob.js";
+import { claimJob } from "../repositories/claimJob.js";
+import { markJobFinished } from "../repositories/updateJob.js";
 
-async function startWorker() {
+async function startWorker(workerId: string) {
   //polling
   while (true) {
-    const job_payload = await retrieveJob();
-    if (job_payload === null) {
+    const job_payload = await claimJob();
+    if (job_payload === null || job_payload === undefined) {
       //wait for two secs
-      console.log("No jobs avaliable. Checking again in 2 seconds");
+      console.log(
+        `No jobs avaliable for ${workerId}. Checking again in 2 seconds`
+      );
       await new Promise((resolve) => setTimeout(resolve, 2000));
       continue;
     }
-    const job_id = job_payload.id;
     //update status to started
-    await markJobStarted("started", job_id);
+
+    const job_id = job_payload.id;
+    console.log(`${workerId} claimed ${job_id}`);
+
     const job_type = job_payload.job_type;
     const job_data = job_payload.job_data;
 
@@ -27,6 +31,7 @@ async function startWorker() {
         await emailHandler(job_data);
         //call repo to update the DB for status = completed, finished_at = currentTime
         await markJobFinished("completed", job_id);
+        console.log(`${workerId} completed ${job_id}`);
       }
       //else if other job_type
       else {
@@ -40,4 +45,5 @@ async function startWorker() {
   }
 }
 
-startWorker();
+startWorker("worker-1");
+startWorker("worker-2");
