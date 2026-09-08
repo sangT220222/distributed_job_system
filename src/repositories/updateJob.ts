@@ -6,7 +6,6 @@ export async function markJobFinished(status: string, id: string) {
   const values = [status, id];
   const result = await pool.query(query, values);
   if (result.rowCount === 1) {
-    console.log("Job status updated");
   }
   return result;
 }

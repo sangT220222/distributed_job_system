@@ -10,13 +10,11 @@ export async function claimJob() {
         LIMIT 1
     )
     UPDATE jobs
-    SET job_status = 'started'
+    SET job_status = 'started',
+    started_at = CURRENT_TIMESTAMP
     FROM selected_row
     WHERE jobs.id = selected_row.id
     RETURNING *;`;
   const result = await pool.query(query);
-  if (result.rowCount === 1) {
-    console.log("Job status updated");
-  }
   return result.rows[0];
 }

@@ -18,7 +18,7 @@ async function startWorker(workerId: string) {
       continue;
     }
     //update status to started
-    console.log(job_payload);
+
     const job_id = job_payload.id;
     console.log(`${workerId} claimed ${job_id}`);
 
@@ -31,6 +31,7 @@ async function startWorker(workerId: string) {
         await emailHandler(job_data);
         //call repo to update the DB for status = completed, finished_at = currentTime
         await markJobFinished("completed", job_id);
+        console.log(`${workerId} completed ${job_id}`);
       }
       //else if other job_type
       else {
