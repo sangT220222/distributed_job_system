@@ -3,7 +3,10 @@
 //polling method to see if next job avaliable
 import { emailHandler } from "../handlers/sendEmailHandler.js";
 import { claimJob } from "../repositories/claimJob.js";
-import { markJobFinished } from "../repositories/updateJob.js";
+import {
+  handleJobFailure,
+  markJobFinished,
+} from "../repositories/updateJob.js";
 
 async function startWorker(workerId: string) {
   //polling
@@ -30,7 +33,7 @@ async function startWorker(workerId: string) {
       if (job_type === "send_email") {
         await emailHandler(job_data);
         //call repo to update the DB for status = completed, finished_at = currentTime
-        await markJobFinished("completed", job_id);
+        await markJobFinished(job_id);
         console.log(`${workerId} completed ${job_id}`);
       }
       //else if other job_type
@@ -40,7 +43,10 @@ async function startWorker(workerId: string) {
     } catch (error) {
       //call repo to update the DB for status = failed, finished_at = currentTime
       console.error("Job failed ", error);
-      await markJobFinished("failed", job_id);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const check = await handleJobFailure(job_id, errorMessage);
+      console.log(check);
     }
   }
 }
