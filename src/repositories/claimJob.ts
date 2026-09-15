@@ -4,7 +4,13 @@ export async function claimJob() {
   const query = `WITH selected_row AS (
         SELECT *
         FROM jobs
-        WHERE job_status = 'standby'
+        WHERE job_status = 'standby' 
+          AND retry_count <= max_retries 
+          AND (
+                next_retry_at is NULL
+                OR next_retry_at <= CURRENT_TIMESTAMP
+              )
+
         ORDER BY created_at ASC
         FOR UPDATE SKIP LOCKED
         LIMIT 1
