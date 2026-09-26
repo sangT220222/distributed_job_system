@@ -3,13 +3,19 @@ services:
     image: postgres:18
     container_name: postgres_container_dev
     environment:
-      POSTGRES_USER: ${DATABASE_USERNAM}
+      POSTGRES_USER: ${DATABASE_USERNAME}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6380:6379"
+      # REDIS_URL=redis://localhost:6380 as one has another REDIS server on local docker exposed to 6370
 
 volumes:
   postgres_data:
