@@ -1,11 +1,21 @@
 //publisher is resposible for getting all jobs that doesn't have published_at time stamp
 import { getJobsToPublish } from "../repositories/get_unpublished_jobs.js";
+import { redisClient } from "../redis.js";
 
 export async function publishToRedis() {
   const jobs_to_publish = await getJobsToPublish();
+  console.log("Jobs to publish:", jobs_to_publish);
+
   for (const event of jobs_to_publish) {
-    // add event to REDIS
-    //if not success, handle error
+    console.log("Pushing:", event.job_id);
+
+    const result = await redisClient.lPush(
+      "jobQueue",
+
+      event.job_id
+    );
+
+    console.log("Redis queue length after push:", result);
   }
 }
 
