@@ -9,11 +9,7 @@ export async function publishToRedis() {
   for (const event of jobs_to_publish) {
     console.log("Pushing:", event.job_id);
 
-    const result = await redisClient.lPush(
-      "jobQueue",
-
-      event.job_id
-    );
+    const result = await redisClient.lPush("jobQueue", event.job_id);
 
     console.log("Redis queue length after push:", result);
   }

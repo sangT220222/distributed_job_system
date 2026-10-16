@@ -7,26 +7,31 @@ import {
   handleJobFailure,
   markJobFinished,
 } from "../repositories/updateJob.js";
+import { redisClient } from "../redis.js";
 
 async function startWorker(workerId: string) {
   //polling
   while (true) {
-    const job_payload = await claimJob();
-    if (job_payload === null || job_payload === undefined) {
-      //wait for two secs
-      console.log(
-        `No jobs avaliable for ${workerId}. Checking again in 2 seconds`
-      );
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+    //implementing Redis queue retrieval
+
+    const jobID = await redisClient.blMove(
+      "jobQueue", //source
+      "processing", //destination
+      "RIGHT", // as we use lpush when we push unpublished jobs, we do right to retrieve the oldest items
+      "LEFT", //insert at left for destination
+      0 //timeout second - this means the worker waits indefinitely if jobQueue is empty.
+    );
+
+    console.log(`${jobID} claimed`);
+    if (!jobID) {
+      console.log(`Job: ${jobID} can not be claimed`);
       continue;
     }
-    //update status to started
+    //get payload from SQL
+    const job_payload = await claimJob(jobID);
+    console.log(`${workerId} claimed ${job_payload.id}`);
 
-    const job_id = job_payload.id;
-    console.log(`${workerId} claimed ${job_id}`);
-
-    const job_type = job_payload.job_type;
-    const job_data = job_payload.job_data;
+    const { job_id, job_type, job_data } = job_payload;
 
     try {
       //as we add more handlers, switch case to be used rather that if & else
