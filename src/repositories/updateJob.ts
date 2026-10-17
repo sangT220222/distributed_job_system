@@ -2,7 +2,7 @@ import pool from "../db/migrations/pool.js";
 
 export async function markJobFinished(id: string) {
   const query =
-    "UPDATE jobs SET job_status = 'finished'::status, finished_at = CURRENT_TIMESTAMP WHERE id = $2";
+    "UPDATE jobs SET job_status = 'completed'::status, finished_at = CURRENT_TIMESTAMP WHERE id = $1";
   const values = [id];
   const result = await pool.query(query, values);
   if (result.rowCount === 1) {
@@ -38,7 +38,7 @@ export async function handleJobFailure(id: string, error_message: string) {
     `;
   const value = [id, error_message];
   const result = await pool.query(query, value);
-  if (result.rowCount === 1) {
-  }
+  // if (result.rowCount === 1) {
+  // }
   return result;
 }

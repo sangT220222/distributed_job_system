@@ -7,49 +7,70 @@ import {
   handleJobFailure,
   markJobFinished,
 } from "../repositories/updateJob.js";
+import { redisClient } from "../redis.js";
 
 async function startWorker(workerId: string) {
-  //polling
+  //with seperate connections, workers are able to wait independently for work,
+  // allowing them to process jobs concurrently
+  const workerRedis = redisClient.duplicate();
+  await workerRedis.connect();
   while (true) {
-    const job_payload = await claimJob();
-    if (job_payload === null || job_payload === undefined) {
-      //wait for two secs
-      console.log(
-        `No jobs avaliable for ${workerId}. Checking again in 2 seconds`
-      );
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+    //implementing Redis queue retrieval
+    const jobID = await workerRedis.blMove(
+      "jobQueue", //source
+      "processing", //destination
+      "RIGHT", // as we use lpush when we push unpublished jobs, we do right to retrieve the oldest items
+      "LEFT", //insert at left for destination
+      0 //timeout second - this means the worker waits indefinitely if jobQueue is empty.
+    );
+
+    console.log(`${jobID} claimed`);
+    if (!jobID) {
+      console.log(`Job: ${jobID} can not be claimed`);
       continue;
     }
-    //update status to started
+    //get payload from SQL
+    const job_payload = await claimJob(jobID);
 
-    const job_id = job_payload.id;
-    console.log(`${workerId} claimed ${job_id}`);
+    if (!job_payload) {
+      console.log(`${workerId}: Job ${jobID} could not be claimed`);
+      continue;
+    }
 
-    const job_type = job_payload.job_type;
-    const job_data = job_payload.job_data;
+    const { id, job_type, job_data } = job_payload;
+    console.log(`${workerId} claimed ${id}`);
+
+    let handlerError: unknown = null;
 
     try {
-      //as we add more handlers, switch case to be used rather that if & else
       if (job_type === "send_email") {
         await emailHandler(job_data);
-        //call repo to update the DB for status = completed, finished_at = currentTime
-        await markJobFinished(job_id);
-        console.log(`${workerId} completed ${job_id}`);
-      }
-      //else if other job_type
-      else {
-        throw new Error(`Unsupported job type : ${job_type}`);
+      } else {
+        throw new Error(`Unsupported job type: ${job_type}`);
       }
     } catch (error) {
-      //call repo to update the DB for status = failed, finished_at = currentTime
-      console.error("Job failed ", error);
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      const check = await handleJobFailure(job_id, errorMessage);
-      console.log(check);
+      handlerError = error;
     }
+
+    if (handlerError === null) {
+      await markJobFinished(id);
+      console.log(`${workerId} completed ${id}`);
+    } else {
+      const errorMessage =
+        handlerError instanceof Error
+          ? handlerError.message
+          : String(handlerError);
+
+      await handleJobFailure(id, errorMessage);
+    }
+    console.log(`[${workerId}] About to acknowledge ${jobID}`);
+
+    const removed = await workerRedis.lRem("processing", -1, jobID);
+
+    console.log(`[${workerId}] Acknowledged ${jobID}. Removed: ${removed}`);
   }
 }
 
 startWorker("worker-1");
 startWorker("worker-2");
+startWorker("worker-3");
