@@ -28,7 +28,7 @@ import pool from "../db/migrations/pool.js";
 export async function claimJob(job_id: string) {
   const query = `
         UPDATE jobs
-        SET job_status = 'progressing'
+        SET job_status = 'started'
         WHERE id = $1
           AND job_status = 'standby'
         RETURNING id, job_type, job_data

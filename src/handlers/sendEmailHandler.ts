@@ -8,6 +8,6 @@ export async function emailHandler(data: JobDataContent) {
   console.log(`sending email to ${data.email_address}`);
   await new Promise((resolve) => setTimeout(resolve, 2000));
   //throwing error for testing purposes
-  throw new Error("Simulated email failure");
-  // console.log(`Email sent to ${data.email_address}`);
+  // throw new Error("Simulated email failure");
+  console.log(`Email sent to ${data.email_address}`);
 }
