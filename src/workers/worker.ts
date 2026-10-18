@@ -3,6 +3,7 @@
 //polling method to see if next job avaliable
 import { emailHandler } from "../handlers/sendEmailHandler.js";
 import { claimJob } from "../repositories/claimJob.js";
+import { setWorkerTTL } from "./set_worker_ttl.js";
 import {
   handleJobFailure,
   markJobFinished,
@@ -13,7 +14,15 @@ async function startWorker(workerId: string) {
   //with seperate connections, workers are able to wait independently for work,
   // allowing them to process jobs concurrently
   const workerRedis = redisClient.duplicate();
+  const heartbeatRedis = redisClient.duplicate();
   await workerRedis.connect();
+  await heartbeatRedis.connect();
+  setInterval(() => {
+    setWorkerTTL(workerId, heartbeatRedis).catch((error) => {
+      console.error(`[${workerId}] Heartbeat failed:`, error);
+    }); //as setWorkerTTL is async, we want to handle failure
+  }, 5000);
+
   while (true) {
     //implementing Redis queue retrieval
     const jobID = await workerRedis.blMove(
