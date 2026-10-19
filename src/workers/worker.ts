@@ -17,10 +17,14 @@ async function startWorker(workerId: string) {
   const heartbeatRedis = redisClient.duplicate();
   await workerRedis.connect();
   await heartbeatRedis.connect();
+  //add workerId to Redis registry/map for recovery component to refer to
+  await workerRedis.sAdd("workers:registry", workerId);
+
+  //heartbeat implementation for worker failure detection
   setInterval(() => {
     setWorkerTTL(workerId, heartbeatRedis).catch((error) => {
       console.error(`[${workerId}] Heartbeat failed:`, error);
-    }); //as setWorkerTTL is async, we want to handle failure
+    }); //as setWorkerTTL() is async, we want to handle failure
   }, 5000);
 
   while (true) {
