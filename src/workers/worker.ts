@@ -31,7 +31,7 @@ async function startWorker(workerId: string) {
     //implementing Redis queue retrieval
     const jobID = await workerRedis.blMove(
       "jobQueue", //source
-      "processing", //destination
+      `processing-${workerId}`, //destination
       "RIGHT", // as we use lpush when we push unpublished jobs, we do right to retrieve the oldest items
       "LEFT", //insert at left for destination
       0 //timeout second - this means the worker waits indefinitely if jobQueue is empty.
@@ -78,7 +78,7 @@ async function startWorker(workerId: string) {
     }
     console.log(`[${workerId}] About to acknowledge ${jobID}`);
 
-    const removed = await workerRedis.lRem("processing", -1, jobID);
+    const removed = await workerRedis.lRem(`processing-${workerId}`, -1, jobID);
 
     console.log(`[${workerId}] Acknowledged ${jobID}. Removed: ${removed}`);
   }
