@@ -1,6 +1,6 @@
 //publisher is resposible for getting all jobs that doesn't have published_at time stamp
-import { getJobsToPublish } from "../repositories/publisher_getUnpublishedJobs.js";
-import { updateJobsToPublished } from "../repositories/publisher_updateJobsToPublished.js";
+import { getJobsToPublish } from "../repositories/publisher_get_unpublished_jobs.js";
+import { updateJobsToPublished } from "../repositories/publisher_update_jobs_to_published.js";
 import { redisClient } from "../redis.js";
 
 export async function publishToRedis() {

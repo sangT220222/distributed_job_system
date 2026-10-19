@@ -3,6 +3,7 @@
 //polling method to see if next job avaliable
 import { emailHandler } from "../handlers/sendEmailHandler.js";
 import { claimJob } from "../repositories/claimJob.js";
+import { setWorkerTTL } from "./set_worker_ttl.js";
 import {
   handleJobFailure,
   markJobFinished,
@@ -13,12 +14,24 @@ async function startWorker(workerId: string) {
   //with seperate connections, workers are able to wait independently for work,
   // allowing them to process jobs concurrently
   const workerRedis = redisClient.duplicate();
+  const heartbeatRedis = redisClient.duplicate();
   await workerRedis.connect();
+  await heartbeatRedis.connect();
+  //add workerId to Redis registry/map for recovery component to refer to
+  await workerRedis.sAdd("workers:registry", workerId);
+
+  //heartbeat implementation for worker failure detection
+  setInterval(() => {
+    setWorkerTTL(workerId, heartbeatRedis).catch((error) => {
+      console.error(`[${workerId}] Heartbeat failed:`, error);
+    }); //as setWorkerTTL() is async, we want to handle failure
+  }, 5000);
+
   while (true) {
     //implementing Redis queue retrieval
     const jobID = await workerRedis.blMove(
       "jobQueue", //source
-      "processing", //destination
+      `processing-${workerId}`, //destination
       "RIGHT", // as we use lpush when we push unpublished jobs, we do right to retrieve the oldest items
       "LEFT", //insert at left for destination
       0 //timeout second - this means the worker waits indefinitely if jobQueue is empty.
@@ -65,7 +78,7 @@ async function startWorker(workerId: string) {
     }
     console.log(`[${workerId}] About to acknowledge ${jobID}`);
 
-    const removed = await workerRedis.lRem("processing", -1, jobID);
+    const removed = await workerRedis.lRem(`processing-${workerId}`, -1, jobID);
 
     console.log(`[${workerId}] Acknowledged ${jobID}. Removed: ${removed}`);
   }
