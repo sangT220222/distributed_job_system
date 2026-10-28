@@ -4,7 +4,9 @@ import dotenv from "dotenv";
 // import cron from 'node-cron'; //optional: for scheduled heakth check
 
 //load up env variables
-dotenv.config();
+dotenv.config({
+  path: process.env.NODE_ENV === "test" ? ".env.test" : ".env",
+});
 
 //PostgreSQL connection
 //Utilising environmental variables to keep information secure and adaptable to different environments
@@ -13,7 +15,7 @@ const pool = new Pool({
   // host:
   database: process.env.DATABASE_NAME,
   password: process.env.DATABASE_PASSWORD,
-  port: Number(process.env),
+  port: Number(process.env.DATABASE_PORT ?? 5432),
 });
 
 //Connection pooling is used can be reused multiple times, hence increasing performance -> helps high traffic apps
