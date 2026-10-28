@@ -1,6 +1,6 @@
 import pool from "../db/migrations/pool.js";
 
-export type RecoveryResult =
+type RecoveryResult =
   | { status: "recovered" }
   | { status: "already_standby" }
   | { status: "terminal" }
