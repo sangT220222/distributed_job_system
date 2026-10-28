@@ -34,7 +34,7 @@ export async function handleJobFailure(id: string, error_message: string) {
             ELSE CURRENT_TIMESTAMP
         END,
         last_error = $2
-    WHERE id = $1;
+    WHERE id = $1 AND job_status = 'started'::status;;
     `;
   const value = [id, error_message];
   const result = await pool.query(query, value);
