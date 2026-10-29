@@ -46,10 +46,9 @@ describe("claim job test", () => {
   });
   afterEach(async () => {
     //clear test data out
-    const removeTestData = `
-        DELETE FROM jobs
-        WHERE id = $1
-    `;
-    await pool.query(removeTestData, [test_job_id]);
+    if (test_job_id) {
+      await pool.query(`DELETE FROM jobs WHERE id = $1`, [test_job_id]);
+    }
+    test_job_id = "";
   });
 });
