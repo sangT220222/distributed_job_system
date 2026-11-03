@@ -11,19 +11,22 @@ import {
 } from "vitest";
 import { redisClient } from "../src/redis.js";
 import { workerRecovery } from "../src/recovery/worker_recovery.js";
+import { updateFailedWorkerJobStatus } from "../src/repositories/recovery_update_crashed_worker_jobs.js";
 import pool from "../src/db/migrations/pool.js";
 
 async function createTestJob(
+  jobStatus: string,
   retryCount: number,
   maxRetries: number
 ): Promise<string> {
   const jobInsert = `
         INSERT INTO jobs (job_type, job_data, job_status ,retry_count,max_retries) 
-        VALUES ('send_notification',$1,'started',$2,$3)
+        VALUES ('send_notification',$1,$2,$3,$4)
         RETURNING id;     
       `;
   const result = await pool.query(jobInsert, [
     { data: "test" },
+    jobStatus,
     retryCount,
     maxRetries,
   ]);
@@ -44,7 +47,7 @@ describe("crashed worker scenario", () => {
   });
 
   it("workerRecovery test", async () => {
-    test_job_id = await createTestJob(1, 2);
+    test_job_id = await createTestJob("started", 1, 2);
     await redisClient.lPush(`processing-${workerID}`, test_job_id);
     await workerRecovery([workerID]);
 
@@ -68,6 +71,42 @@ describe("crashed worker scenario", () => {
 
     expect(registered).toBe(0);
   });
+
+  it("returns already_standby for a standby job", async () => {
+    test_job_id = await createTestJob("standby", 1, 2);
+
+    const result = await updateFailedWorkerJobStatus(test_job_id);
+
+    expect(result.status).toBe("already_standby");
+  });
+
+  it("workerRecovery test for standby jobs", async () => {
+    test_job_id = await createTestJob("standby", 1, 2);
+    await redisClient.lPush(`processing-${workerID}`, test_job_id);
+    await workerRecovery([workerID]);
+
+    const result = await pool.query(`SELECT * FROM jobs WHERE id = $1`, [
+      test_job_id,
+    ]);
+
+    const remainingJobs = await redisClient.lRange(
+      `processing-${workerID}`,
+      0,
+      -1
+    );
+
+    expect(result.rows[0].job_status).toBe("standby");
+    console.log("TEST HELLO");
+    console.log(result.rows[0]);
+    expect(result.rows[0].retry_count).toBe(1);
+    expect(remainingJobs).not.toContain(test_job_id);
+    const registered = await redisClient.sIsMember(
+      "workers:registry",
+      workerID
+    );
+    expect(registered).toBe(0);
+  });
+
   afterEach(async () => {
     //clear test data out
     await redisClient.sRem("workers:registry", workerID);
