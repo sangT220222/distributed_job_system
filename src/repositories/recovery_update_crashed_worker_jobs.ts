@@ -15,60 +15,48 @@ export async function updateFailedWorkerJobStatus(
   try {
     await client.query("BEGIN");
 
-    const query = `
-      UPDATE jobs
-      SET job_status = 'standby'
-      WHERE id = $1
-      AND job_status = 'started'
-      RETURNING id;
-    `;
-
-    const result = await client.query(query, [jobId]);
-
-    if (result.rowCount !== 1) {
-      await client.query("ROLLBACK");
-      return { status: "terminal" };
-    }
-
-    const insertOutboxEvent = `
-      INSERT INTO outbox_events (job_id, event_type)
-      VALUES ($1, $2);
-    `;
-
-    await client.query(insertOutboxEvent, [jobId, "job_recovered"]);
-    await client.query("COMMIT");
-
+    const result = await client.query(
+      `UPDATE jobs
+       SET job_status = 'standby'
+       WHERE id = $1 AND job_status = 'started'
+       RETURNING id`,
+      [jobId]
+    );
+    //if the update is success we insert into outbox event table and commit
     if (result.rowCount === 1) {
-      await client.query("ROLLBACK");
+      await client.query(
+        `INSERT INTO outbox_events (job_id, event_type)
+         VALUES ($1, $2)`,
+        [jobId, "job_recovered"]
+      );
+
+      await client.query("COMMIT");
       return { status: "recovered" };
     }
-    if (result.rowCount === 0) {
-      //check
-      const queryJobStatus = `
-      SELECT job_status
-      FROM jobs
-      WHERE id = $1
-    `;
-      const jobStatus = await client.query(queryJobStatus, [jobId]);
-      if (jobStatus.rowCount === 0) {
-        await client.query("ROLLBACK");
-        return { status: "not_found" };
-      }
 
-      if (jobStatus.rows[0].job_status === "standby") {
-        await client.query("ROLLBACK");
-        return { status: "already_standby" };
-      }
+    //if the update fails, inspect existing job status and return. appropriate result
+    const jobStatus = await client.query(
+      `SELECT job_status FROM jobs WHERE id = $1`,
+      [jobId]
+    );
 
-      if (
-        jobStatus.rows[0].job_status === "completed" ||
-        jobStatus.rows[0].job_status === "failed"
-      ) {
-        await client.query("ROLLBACK");
-        return { status: "terminal" };
-      }
+    await client.query("ROLLBACK");
+
+    if (jobStatus.rowCount === 0) {
+      return { status: "not_found" };
     }
-    return { status: "unknown" };
+
+    switch (jobStatus.rows[0].job_status) {
+      case "standby":
+        return { status: "already_standby" };
+
+      case "completed":
+      case "failed":
+        return { status: "terminal" };
+
+      default:
+        return { status: "unknown" };
+    }
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
