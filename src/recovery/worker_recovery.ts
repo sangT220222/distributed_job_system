@@ -27,7 +27,7 @@ export async function workerRecovery(expiredWorkersList: string[]) {
             break;
 
           case "already_standby":
-            //check if safe o clean redis up
+            //check if safe to clean redis up
             break;
           // case { status: "unknown" }:
           //   break;
