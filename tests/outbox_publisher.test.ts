@@ -2,15 +2,7 @@
 // - An unpublished outbox event results in its job ID being added to jobQueue and its published state being updated.
 // - Running the publisher again does not publish that same event a second time, assuming the first run completed successfully.
 
-import {
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterEach,
-  afterAll,
-  beforeAll,
-} from "vitest";
+import { describe, it, expect, afterEach, afterAll, beforeAll } from "vitest";
 import pool from "../src/db/migrations/pool.js";
 import { redisClient } from "../src/redis.js";
 import { publishToRedis } from "../src/service/publisher.js";

@@ -1,4 +1,4 @@
-import { job_request_schema_v2 } from "../validation/job.schema.js";
+import { job_request_schema_v2 } from "../src/validation/job.schema.js";
 
 const testData = {
   job_type: "send_email",
