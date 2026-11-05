@@ -355,55 +355,21 @@ npm test
 
 The test setup requires `NODE_ENV=test`, and an environment test checks that the database connection points to `distributed_jobs_test`.
 
-## Project structure
-
-```text
-.
-├── docker-compose.yml
-├── vitest.config.ts
-├── tsconfig.json
-├── eslint.config.mjs
-├── src/
-│   ├── server.ts          # API startup and publisher invocation
-│   ├── app.ts             # Express application
-│   ├── redis.ts           # Redis client
-│   ├── routes/            # HTTP routes
-│   ├── controllers/       # Request handlers
-│   ├── middleware/        # Request validation
-│   ├── validation/        # Zod schemas
-│   ├── service/           # Business logic and outbox publisher
-│   ├── repositories/      # Database queries
-│   ├── workers/           # Worker pool and heartbeats
-│   ├── handlers/          # Job handlers
-│   ├── recovery/          # Worker failure detection and recovery
-│   ├── db/migrations/     # SQL migrations
-│   └── types/             # Shared types
-└── tests/                 # Tests and test setup
-```
-
-## Roadmap
-
-### Complete the processing path
-
-- [ ] Run the outbox publisher continuously.
-- [ ] Republish jobs after retryable failures.
-- [ ] Enforce `next_retry_at` before retry execution.
-- [ ] Define and document retry counting and backoff timing precisely.
-
-### Strengthen recovery and verification
-
-- [ ] Address overlapping execution when a worker resumes after its heartbeat expires.
-- [ ] Add idempotency handling for external side effects.
-- [ ] Verify failure windows with tests for duplicate delivery, publisher interruption, and worker crashes.
+## Known limitation
 
 ### Improve usability and operations
 
-- [ ] Implement image resizing and notification handlers.
-- [ ] Add job status and listing endpoints.
-- [ ] Add a migration runner.
-- [ ] Add continuous integration and an application Dockerfile.
-- [ ] Add structured logging and metrics.
+- **Duplicate side effects are possible.** A worker could perform an
+  action, then crash before recording as Complete.
+  Recovery could run that action again. Handlers need an idempotency
+  strategy to prevent harmful duplicates.
 
-## License
+- **Heartbeat is an unreliable mechanism to detect a completely failed worker.**
 
-ISC, as declared in `package.json`.
+- **Publishing jobs can produce duplicate queue entries.** If the publisher
+  pushes a job ID to Redis but crashes before marking the outbox event as
+  published, a later publisher run can enqueue that ID again.
+
+- **Publishing can produce duplicate queue entries.** If the publisher
+  pushes a job ID to Redis but crashes before marking the outbox event as
+  published, a later publisher run can enqueue that ID again.

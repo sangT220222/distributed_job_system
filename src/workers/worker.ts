@@ -10,7 +10,7 @@ import {
 } from "../repositories/updateJob.js";
 import { redisClient } from "../redis.js";
 
-async function startWorker(workerId: string) {
+export async function startWorker(workerId: string) {
   //with seperate connections, workers are able to wait independently for work,
   // allowing them to process jobs concurrently
   const workerRedis = redisClient.duplicate();
