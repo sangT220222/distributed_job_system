@@ -17,7 +17,7 @@ PostgreSQL stores job state and outbox events. Redis transports job IDs to worke
 - [Job lifecycle](#job-lifecycle)
 - [Data model](#data-model)
 - [Testing](#testing)
-- [Known limitations](#known-limitations)
+- [Known limitation](#known-limitation)
 
 
 ## Overview
