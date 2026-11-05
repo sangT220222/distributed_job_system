@@ -17,9 +17,8 @@ PostgreSQL stores job state and outbox events. Redis transports job IDs to worke
 - [Job lifecycle](#job-lifecycle)
 - [Data model](#data-model)
 - [Testing](#testing)
-- [Project structure](#project-structure)
-- [Roadmap](#roadmap)
-- [License](#license)
+- [Known limitations](#known-limitations)
+
 
 ## Overview
 
@@ -356,8 +355,6 @@ npm test
 The test setup requires `NODE_ENV=test`, and an environment test checks that the database connection points to `distributed_jobs_test`.
 
 ## Known limitation
-
-### Improve usability and operations
 
 - **Duplicate side effects are possible.** A worker could perform an
   action, then crash before recording as Complete.
